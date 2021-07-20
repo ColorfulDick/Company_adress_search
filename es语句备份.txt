@@ -1,0 +1,285 @@
+POST /_analyze
+{
+  "analyzer":"not_analyzed",
+  "text":"广州市天河区高天路"
+}
+GET /ropledata2/_analyze
+{
+  "field": "address",
+  "text": "广州市天河区高普路"
+}
+GET /ropledata2/_search?q=address:"深圳市福田区科技路"
+{
+"profile":"true"
+}
+GET /ropledata2/_search#精确匹配
+{
+    "query": {
+        "match_phrase": {
+            "company":"香满楼"
+        }
+    }
+}
+
+GET /ropledata2/_search#精确匹配
+{
+    "query": {
+        "match_phrase": {
+            "_id":"7ce5e4c87b88c7f6e2e7ec72405e7779"
+             }
+        }
+}
+
+GET /ropledata2/_search
+GET ropledata2/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "exists": {
+            "field": "sex"
+          }
+        }
+      ]
+    }
+  }
+}
+
+
+DELETE /ropledata2
+PUT /ropledata2
+{
+  "settings":{
+    "number_of_shards" : "3",
+        "number_of_replicas" : "0",
+         "analysis": {
+            "analyzer": {
+                "ik_en_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "ik_max_word",
+                    "filter": ["my_pinyin"]
+                }
+            },
+            "filter": {
+                 "my_pinyin" : {
+                     "type" : "pinyin",
+                    "keep_separate_first_letter" : false,
+                    "keep_full_pinyin" : true,
+                    "keep_original" : true,
+                    "limit_first_letter_length" : 16,
+                    "lowercase" : true,
+                    "remove_duplicated_term" : true
+                }
+            }
+        }
+  },
+  "mappings":{
+    "properties":{
+      "id":{"type":"long"},
+      "address":{
+        "type" : "text",
+        "analyzer" : "ik_en_analyzer"
+      },
+      "company":{
+        "type" : "text",
+        "analyzer" : "ik_en_analyzer"
+      },
+      "text":{"type":"text"}
+    }
+  }
+}
+
+POST _bulk
+{ "create" : { "_index" : "ropledata2", "_id" : "1005" } }
+{"id":5,"address": "广州市天河区高普路","company": ["软通动力","欧博方"]}
+{ "create" : { "_index" : "ropledata2", "_id" : "1006" } }
+{"id":6,"address": "广州市天河区高科路","company": ["香满楼","燕塘"]}
+{ "create" : { "_index" : "ropledata2", "_id" : "1007" } }
+{"id":7,"address": "深圳市福田区科技路","company": ["香满楼","腾讯"]}
+{ "create" : { "_index" : "ropledata2", "_id" : "1008" } }
+{"id":8,"address": "上海市静安区南京路","company": ["阿里巴巴","腾讯"]}
+{ "create" : { "_index" : "ropledata2", "_id" : "1009" } }
+{"id":9,"address": "上海市杨浦区五角场路","company": ["超电文化","米哈游"]}
+{ "create" : { "_index" : "ropledata2", "_id" : "1010" } }
+{"id":10,"address": "广州市天河区高安路","company": ["唯品会"]}
+
+
+
+
+POST ropledata2/_search#多字段匹配
+{
+  "query": {
+    "multi_match":{
+      "query":"香满楼",
+      "fields":["address","company"]
+    } 
+  },
+  "from":0,
+  "size":1
+}
+POST ropledata2/_search
+{
+  "query" : {
+        "constant_score" : {
+            "filter" : {
+                "term" : {
+                    "address": "南京"
+                }
+            }
+        }
+    }
+}
+
+
+POST ropledata2/_update_by_query
+{
+	"query" : {
+        "constant_score" : {
+            "filter" : {
+                "term" : {
+                    "address": "高"
+                }
+            }
+        }
+    }
+	,
+	"script": {
+		"source": "ctx._source['address']='广州市天河区高普路128号';"
+	}
+}
+
+POST ropledata2/_update_by_query
+{
+	"query" : {
+        "constant_score" : {
+            "filter" : {
+                "term" : {
+                    "address": "高"
+                }
+            }
+        }
+    }
+	,
+	"script": {
+		"source": "ctx._source['address']='广州市天河区高普路128号';"
+	}
+}
+
+POST ropledata2/_update_by_query#把address字符变数组再插入
+{
+	"query": {
+        "match_phrase": {
+            "address":"广州市天河区高科路"
+        }
+    }
+	,
+	"script": {
+		"source": "ctx._source['address']=['广州市天河区高科路125号'];"
+	}
+}
+
+POST ropledata2/_search#
+{
+    "query": {
+    "multi_match":{
+    "query":"软通动力在广州市天河区高普路",
+    "fields":["company","address"]
+                    } 
+            },
+        "from":0,
+        "size":1
+}
+
+PUT /_all/_settings
+{
+  "index.blocks.read_only_allow_delete": null
+}            
+GET /ropledata2/_search
+POST ropledata2/_update_by_query#变更指定地址/企业的名字
+{
+  "query": {
+        "match_phrase": {
+            "company":"香满楼乳业"
+        }
+    },
+  "script": {              
+  "lang": "painless",             
+  "source": "for (int i=0;i<ctx._source.company.size();i++) {if(ctx._source.company[i]== params.old) { ctx._source.company[i] = params.new} }",
+  "params": {
+    "old": "香满楼乳业",
+    "new": "香满楼99999"
+  }
+}
+}
+
+POST ropledata2/_search#多字段匹配
+{
+  "query": {
+    "multi_match":{
+      "query":"广州市天河区高普路",
+      "fields":["address"]
+    } 
+  }
+}
+
+POST ropledata2/_search/exists
+{
+  "query" : {
+        "term" : { "user" : "kimchy" }
+    }
+}
+
+POST ropledata2/_update_by_query#
+{
+  "query": {
+        "match_phrase": {
+            "address":"广州市天河区高安路138号"
+        }
+    },
+  "script": {
+    "source": "ctx._source.company.add(params.tag)",
+    "lang": "painless",
+    "params": {
+      "tag": "blue"
+    }
+  }
+}
+
+PUT ropledata2/_doc/17273948879270242946
+{
+  "address": "广州市天河区高天路144号","company": []
+}
+
+POST ropledata2/_search#
+{
+  "query": {
+        "match_phrase": {
+            "_id":"4c33a6389976ee4b1441f101b2183f44"
+        }
+    }
+}
+
+POST ropledata2/_search#
+{
+  "query": {
+        "match_phrase": {
+            "company":"香满楼"
+        }
+    }
+}
+POST ropledata2/_update_by_query#变更指定地址/企业的名字
+{
+  "query": {
+        "match_phrase": {
+            "company":"香满楼"
+        }
+    },
+  "script": {              
+  "lang": "painless",
+  "source": "int a=0;for (int i=0;i<ctx._source.company.size();i++) {if(ctx._source.company[i]==params.tag){a=1;break;}}if(a==0){ctx._source.company.add(params.tag)}",
+  "params":{
+    "tag":"香满楼8888"
+  }
+}
+}

@@ -1,0 +1,1 @@
+uvicorn op_mysql:app --host 0.0.0.0 --port 5102 --reload
